@@ -1,0 +1,59 @@
+<html>
+<head>
+<title>check_files.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #7a7e85;}
+.s3 { color: #bcbec4;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+check_files.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">os</span>
+
+<span class="s2"># The path to your dataset folder</span>
+<span class="s1">DATASET_PATH </span><span class="s3">= </span><span class="s4">&quot;custom_dataset&quot;</span>
+
+<span class="s1">print</span><span class="s3">(</span><span class="s4">f&quot;--- Checking contents of '</span><span class="s0">{</span><span class="s1">DATASET_PATH</span><span class="s0">}</span><span class="s4">' ---&quot;</span><span class="s3">)</span>
+
+<span class="s2"># Check if the main dataset folder exists</span>
+<span class="s0">if not </span><span class="s1">os</span><span class="s3">.</span><span class="s1">path</span><span class="s3">.</span><span class="s1">exists</span><span class="s3">(</span><span class="s1">DATASET_PATH</span><span class="s3">):</span>
+    <span class="s1">print</span><span class="s3">(</span><span class="s4">f&quot;ERROR: The main folder '</span><span class="s0">{</span><span class="s1">DATASET_PATH</span><span class="s0">}</span><span class="s4">' does not exist!&quot;</span><span class="s3">)</span>
+<span class="s0">else</span><span class="s3">:</span>
+    <span class="s2"># Get all the sub-folders (e.g., '0_bored', '1_not_looking')</span>
+    <span class="s1">sub_folders </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">listdir</span><span class="s3">(</span><span class="s1">DATASET_PATH</span><span class="s3">)</span>
+
+    <span class="s0">if not </span><span class="s1">sub_folders</span><span class="s3">:</span>
+        <span class="s1">print</span><span class="s3">(</span><span class="s4">&quot;The 'custom_dataset' folder is empty.&quot;</span><span class="s3">)</span>
+    <span class="s0">else</span><span class="s3">:</span>
+        <span class="s1">print</span><span class="s3">(</span><span class="s4">f&quot;Found sub-folders: </span><span class="s0">{</span><span class="s1">sub_folders</span><span class="s0">}\n</span><span class="s4">&quot;</span><span class="s3">)</span>
+
+        <span class="s2"># Loop through each sub-folder</span>
+        <span class="s0">for </span><span class="s1">folder </span><span class="s0">in </span><span class="s1">sub_folders</span><span class="s3">:</span>
+            <span class="s1">folder_path </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">path</span><span class="s3">.</span><span class="s1">join</span><span class="s3">(</span><span class="s1">DATASET_PATH</span><span class="s3">, </span><span class="s1">folder</span><span class="s3">)</span>
+
+            <span class="s2"># Check if it's actually a folder</span>
+            <span class="s0">if </span><span class="s1">os</span><span class="s3">.</span><span class="s1">path</span><span class="s3">.</span><span class="s1">isdir</span><span class="s3">(</span><span class="s1">folder_path</span><span class="s3">):</span>
+                <span class="s2"># Get all the files inside the sub-folder</span>
+                <span class="s1">files </span><span class="s3">= </span><span class="s1">os</span><span class="s3">.</span><span class="s1">listdir</span><span class="s3">(</span><span class="s1">folder_path</span><span class="s3">)</span>
+                <span class="s1">print</span><span class="s3">(</span><span class="s4">f&quot;--- In folder '</span><span class="s0">{</span><span class="s1">folder</span><span class="s0">}</span><span class="s4">':&quot;</span><span class="s3">)</span>
+                <span class="s0">if not </span><span class="s1">files</span><span class="s3">:</span>
+                    <span class="s1">print</span><span class="s3">(</span><span class="s4">&quot;    -&gt; This folder is EMPTY.&quot;</span><span class="s3">)</span>
+                <span class="s0">else</span><span class="s3">:</span>
+                    <span class="s1">print</span><span class="s3">(</span><span class="s4">f&quot;    -&gt; Found </span><span class="s0">{</span><span class="s1">len</span><span class="s3">(</span><span class="s1">files</span><span class="s3">)</span><span class="s0">} </span><span class="s4">files. The first 5 are:&quot;</span><span class="s3">)</span>
+                    <span class="s2"># Print the first 5 files found</span>
+                    <span class="s0">for </span><span class="s1">file_name </span><span class="s0">in </span><span class="s1">files</span><span class="s3">[:</span><span class="s5">5</span><span class="s3">]:</span>
+                        <span class="s1">print</span><span class="s3">(</span><span class="s4">f&quot;       - </span><span class="s0">{</span><span class="s1">file_name</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s3">)</span>
+            <span class="s1">print</span><span class="s3">(</span><span class="s4">&quot;-&quot; </span><span class="s3">* </span><span class="s5">20</span><span class="s3">)</span>
+
+<span class="s1">print</span><span class="s3">(</span><span class="s4">&quot;</span><span class="s0">\n</span><span class="s4">--- Check complete ---&quot;</span><span class="s3">)</span></pre>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<html>
+<head>
+<title>main.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #5f826b; font-style: italic;}
+.s5 { color: #6aab73;}
+.s6 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+main.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+<span class="s0">import </span><span class="s1">tensorflow </span><span class="s0">as </span><span class="s1">tf</span>
+<span class="s0">from </span><span class="s1">tensorflow</span><span class="s2">.</span><span class="s1">keras</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">Sequential</span>
+<span class="s0">from </span><span class="s1">tensorflow</span><span class="s2">.</span><span class="s1">keras</span><span class="s2">.</span><span class="s1">layers </span><span class="s0">import </span><span class="s1">Conv2D</span><span class="s2">, </span><span class="s1">MaxPooling2D</span><span class="s2">, </span><span class="s1">Flatten</span><span class="s2">, </span><span class="s1">Dense</span><span class="s2">, </span><span class="s1">Dropout</span>
+<span class="s0">from </span><span class="s1">tensorflow</span><span class="s2">.</span><span class="s1">keras</span><span class="s2">.</span><span class="s1">utils </span><span class="s0">import </span><span class="s1">to_categorical</span>
+<span class="s0">from </span><span class="s1">sklearn</span><span class="s2">.</span><span class="s1">model_selection </span><span class="s0">import </span><span class="s1">train_test_split</span>
+<span class="s0">import </span><span class="s1">os</span>
+
+
+<span class="s3"># --- Step 1: Load and Preprocess the Dataset ---</span>
+
+<span class="s0">def </span><span class="s1">load_and_preprocess_data</span><span class="s2">(</span><span class="s1">csv_path</span><span class="s2">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    Loads the FER2013 dataset from a CSV file and preprocesses it for training. 
+    &quot;&quot;&quot;</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Loading dataset...&quot;</span><span class="s2">)</span>
+    <span class="s3"># Load the dataset using pandas</span>
+    <span class="s1">data </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">read_csv</span><span class="s2">(</span><span class="s1">csv_path</span><span class="s2">)</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Dataset loaded successfully.&quot;</span><span class="s2">)</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s1">data</span><span class="s2">.</span><span class="s1">head</span><span class="s2">())</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">Emotion labels:&quot;</span><span class="s2">, </span><span class="s1">data</span><span class="s2">[</span><span class="s5">&quot;emotion&quot;</span><span class="s2">].</span><span class="s1">unique</span><span class="s2">())</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">Dataset usage counts:</span><span class="s0">\n</span><span class="s5">&quot;</span><span class="s2">, </span><span class="s1">data</span><span class="s2">[</span><span class="s5">&quot;Usage&quot;</span><span class="s2">].</span><span class="s1">value_counts</span><span class="s2">())</span>
+
+    <span class="s3"># --- Convert Pixel Strings to Images ---</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">Preprocessing pixel data...&quot;</span><span class="s2">)</span>
+
+    <span class="s3"># This function converts a string of pixels into a 48x48 normalized image array</span>
+    <span class="s0">def </span><span class="s1">preprocess_pixels</span><span class="s2">(</span><span class="s1">pixels_str</span><span class="s2">):</span>
+        <span class="s1">pixels </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">array</span><span class="s2">(</span><span class="s1">pixels_str</span><span class="s2">.</span><span class="s1">split</span><span class="s2">(), </span><span class="s1">dtype</span><span class="s2">=</span><span class="s5">&quot;float32&quot;</span><span class="s2">)</span>
+        <span class="s3"># Normalize pixel values to be between 0 and 1</span>
+        <span class="s0">return </span><span class="s1">pixels</span><span class="s2">.</span><span class="s1">reshape</span><span class="s2">(</span><span class="s6">48</span><span class="s2">, </span><span class="s6">48</span><span class="s2">, </span><span class="s6">1</span><span class="s2">) / </span><span class="s6">255.0</span>
+
+    <span class="s3"># Apply the function to the 'pixels' column</span>
+    <span class="s1">X </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">array</span><span class="s2">([</span><span class="s1">preprocess_pixels</span><span class="s2">(</span><span class="s1">p</span><span class="s2">) </span><span class="s0">for </span><span class="s1">p </span><span class="s0">in </span><span class="s1">data</span><span class="s2">[</span><span class="s5">&quot;pixels&quot;</span><span class="s2">]])</span>
+
+    <span class="s3"># --- One-Hot Encode Labels ---</span>
+    <span class="s3"># Convert the numerical emotion labels (0-6) into a one-hot encoded format</span>
+    <span class="s1">num_classes </span><span class="s2">= </span><span class="s6">7</span>
+    <span class="s1">y </span><span class="s2">= </span><span class="s1">to_categorical</span><span class="s2">(</span><span class="s1">data</span><span class="s2">[</span><span class="s5">&quot;emotion&quot;</span><span class="s2">], </span><span class="s1">num_classes</span><span class="s2">=</span><span class="s1">num_classes</span><span class="s2">)</span>
+
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">Data shapes:&quot;</span><span class="s2">)</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Images (X) shape:&quot;</span><span class="s2">, </span><span class="s1">X</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">)</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Labels (y) shape:&quot;</span><span class="s2">, </span><span class="s1">y</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">X</span><span class="s2">, </span><span class="s1">y</span>
+
+
+<span class="s3"># --- Step 2: Split Data into Training and Testing Sets ---</span>
+
+<span class="s0">def </span><span class="s1">split_data</span><span class="s2">(</span><span class="s1">X</span><span class="s2">, </span><span class="s1">y</span><span class="s2">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    Splits the data into training and testing sets. 
+    &quot;&quot;&quot;</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">Splitting data into training and testing sets...&quot;</span><span class="s2">)</span>
+
+    <span class="s3"># We use stratify=y to ensure both train and test sets have a similar distribution of emotions</span>
+    <span class="s1">X_train</span><span class="s2">, </span><span class="s1">X_test</span><span class="s2">, </span><span class="s1">y_train</span><span class="s2">, </span><span class="s1">y_test </span><span class="s2">= </span><span class="s1">train_test_split</span><span class="s2">(</span>
+        <span class="s1">X</span><span class="s2">, </span><span class="s1">y</span><span class="s2">, </span><span class="s1">test_size</span><span class="s2">=</span><span class="s6">0.2</span><span class="s2">, </span><span class="s1">random_state</span><span class="s2">=</span><span class="s6">42</span><span class="s2">, </span><span class="s1">stratify</span><span class="s2">=</span><span class="s1">y</span>
+    <span class="s2">)</span>
+
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Training samples:&quot;</span><span class="s2">, </span><span class="s1">X_train</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">[</span><span class="s6">0</span><span class="s2">])</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Testing samples:&quot;</span><span class="s2">, </span><span class="s1">X_test</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">[</span><span class="s6">0</span><span class="s2">])</span>
+
+    <span class="s0">return </span><span class="s1">X_train</span><span class="s2">, </span><span class="s1">X_test</span><span class="s2">, </span><span class="s1">y_train</span><span class="s2">, </span><span class="s1">y_test</span>
+
+
+<span class="s3"># --- Step 3: Build the CNN Model ---</span>
+
+<span class="s0">def </span><span class="s1">build_model</span><span class="s2">(</span><span class="s1">input_shape</span><span class="s2">, </span><span class="s1">num_classes</span><span class="s2">):</span>
+    <span class="s4">&quot;&quot;&quot; 
+    Builds, compiles, and returns the CNN model. 
+    &quot;&quot;&quot;</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">Building the CNN model...&quot;</span><span class="s2">)</span>
+
+    <span class="s1">model </span><span class="s2">= </span><span class="s1">Sequential</span><span class="s2">([</span>
+        <span class="s1">Conv2D</span><span class="s2">(</span><span class="s6">32</span><span class="s2">, (</span><span class="s6">3</span><span class="s2">, </span><span class="s6">3</span><span class="s2">), </span><span class="s1">activation</span><span class="s2">=</span><span class="s5">'relu'</span><span class="s2">, </span><span class="s1">input_shape</span><span class="s2">=</span><span class="s1">input_shape</span><span class="s2">),</span>
+        <span class="s1">MaxPooling2D</span><span class="s2">(</span><span class="s6">2</span><span class="s2">, </span><span class="s6">2</span><span class="s2">),</span>
+        <span class="s1">Dropout</span><span class="s2">(</span><span class="s6">0.25</span><span class="s2">),</span>
+
+        <span class="s1">Conv2D</span><span class="s2">(</span><span class="s6">64</span><span class="s2">, (</span><span class="s6">3</span><span class="s2">, </span><span class="s6">3</span><span class="s2">), </span><span class="s1">activation</span><span class="s2">=</span><span class="s5">'relu'</span><span class="s2">),</span>
+        <span class="s1">MaxPooling2D</span><span class="s2">(</span><span class="s6">2</span><span class="s2">, </span><span class="s6">2</span><span class="s2">),</span>
+        <span class="s1">Dropout</span><span class="s2">(</span><span class="s6">0.25</span><span class="s2">),</span>
+
+        <span class="s1">Conv2D</span><span class="s2">(</span><span class="s6">128</span><span class="s2">, (</span><span class="s6">3</span><span class="s2">, </span><span class="s6">3</span><span class="s2">), </span><span class="s1">activation</span><span class="s2">=</span><span class="s5">'relu'</span><span class="s2">),</span>
+        <span class="s1">MaxPooling2D</span><span class="s2">(</span><span class="s6">2</span><span class="s2">, </span><span class="s6">2</span><span class="s2">),</span>
+        <span class="s1">Dropout</span><span class="s2">(</span><span class="s6">0.25</span><span class="s2">),</span>
+
+        <span class="s1">Flatten</span><span class="s2">(),</span>
+        <span class="s1">Dense</span><span class="s2">(</span><span class="s6">128</span><span class="s2">, </span><span class="s1">activation</span><span class="s2">=</span><span class="s5">'relu'</span><span class="s2">),</span>
+        <span class="s1">Dropout</span><span class="s2">(</span><span class="s6">0.5</span><span class="s2">),</span>
+        <span class="s3"># The final layer must have the same number of neurons as there are classes (7 emotions)</span>
+        <span class="s1">Dense</span><span class="s2">(</span><span class="s1">num_classes</span><span class="s2">, </span><span class="s1">activation</span><span class="s2">=</span><span class="s5">'softmax'</span><span class="s2">)</span>
+    <span class="s2">])</span>
+
+    <span class="s3"># Compile the model</span>
+    <span class="s1">model</span><span class="s2">.</span><span class="s1">compile</span><span class="s2">(</span><span class="s1">optimizer</span><span class="s2">=</span><span class="s5">'adam'</span><span class="s2">,</span>
+                  <span class="s1">loss</span><span class="s2">=</span><span class="s5">'categorical_crossentropy'</span><span class="s2">,</span>
+                  <span class="s1">metrics</span><span class="s2">=[</span><span class="s5">'accuracy'</span><span class="s2">])</span>
+
+    <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Model built and compiled successfully.&quot;</span><span class="s2">)</span>
+    <span class="s1">model</span><span class="s2">.</span><span class="s1">summary</span><span class="s2">()</span>
+    <span class="s0">return </span><span class="s1">model</span>
+
+
+<span class="s3"># --- Main Execution ---</span>
+
+<span class="s0">if </span><span class="s1">__name__ </span><span class="s2">== </span><span class="s5">&quot;__main__&quot;</span><span class="s2">:</span>
+    <span class="s3"># Define the path to your dataset</span>
+    <span class="s3"># Make sure the 'data' folder is in your PyCharm project root</span>
+    <span class="s1">DATASET_PATH </span><span class="s2">= </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">join</span><span class="s2">(</span><span class="s5">&quot;data&quot;</span><span class="s2">, </span><span class="s5">&quot;fer2013.csv&quot;</span><span class="s2">)</span>
+
+    <span class="s0">if not </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">DATASET_PATH</span><span class="s2">):</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">f&quot;Error: Dataset not found at </span><span class="s0">{</span><span class="s1">DATASET_PATH</span><span class="s0">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;Please make sure 'fer2013.csv' is inside a 'data' folder in your project directory.&quot;</span><span class="s2">)</span>
+    <span class="s0">else</span><span class="s2">:</span>
+        <span class="s3"># 1. Load and process data</span>
+        <span class="s1">X</span><span class="s2">, </span><span class="s1">y </span><span class="s2">= </span><span class="s1">load_and_preprocess_data</span><span class="s2">(</span><span class="s1">DATASET_PATH</span><span class="s2">)</span>
+
+        <span class="s3"># 2. Split data</span>
+        <span class="s1">X_train</span><span class="s2">, </span><span class="s1">X_test</span><span class="s2">, </span><span class="s1">y_train</span><span class="s2">, </span><span class="s1">y_test </span><span class="s2">= </span><span class="s1">split_data</span><span class="s2">(</span><span class="s1">X</span><span class="s2">, </span><span class="s1">y</span><span class="s2">)</span>
+
+        <span class="s3"># 3. Build model</span>
+        <span class="s3"># The input shape is (48, 48, 1) for 48x48 grayscale images</span>
+        <span class="s3"># The number of classes is 7 for the 7 emotions in the dataset</span>
+        <span class="s1">model </span><span class="s2">= </span><span class="s1">build_model</span><span class="s2">(</span><span class="s1">input_shape</span><span class="s2">=(</span><span class="s6">48</span><span class="s2">, </span><span class="s6">48</span><span class="s2">, </span><span class="s6">1</span><span class="s2">), </span><span class="s1">num_classes</span><span class="s2">=</span><span class="s6">7</span><span class="s2">)</span>
+
+        <span class="s3"># 4. Train the model</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">--- Starting Model Training ---&quot;</span><span class="s2">)</span>
+        <span class="s3"># A batch size of 64 is common for this dataset</span>
+        <span class="s3"># We'll train for 30 epochs, but you can increase this for better accuracy</span>
+        <span class="s1">history </span><span class="s2">= </span><span class="s1">model</span><span class="s2">.</span><span class="s1">fit</span><span class="s2">(</span>
+            <span class="s1">X_train</span><span class="s2">, </span><span class="s1">y_train</span><span class="s2">,</span>
+            <span class="s1">batch_size</span><span class="s2">=</span><span class="s6">64</span><span class="s2">,</span>
+            <span class="s1">epochs</span><span class="s2">=</span><span class="s6">30</span><span class="s2">,</span>
+            <span class="s1">validation_data</span><span class="s2">=(</span><span class="s1">X_test</span><span class="s2">, </span><span class="s1">y_test</span><span class="s2">),</span>
+            <span class="s1">verbose</span><span class="s2">=</span><span class="s6">1</span>
+        <span class="s2">)</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;--- Model Training Finished ---&quot;</span><span class="s2">)</span>
+
+        <span class="s3"># 5. Evaluate the model</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">--- Evaluating Model Performance ---&quot;</span><span class="s2">)</span>
+        <span class="s1">loss</span><span class="s2">, </span><span class="s1">accuracy </span><span class="s2">= </span><span class="s1">model</span><span class="s2">.</span><span class="s1">evaluate</span><span class="s2">(</span><span class="s1">X_test</span><span class="s2">, </span><span class="s1">y_test</span><span class="s2">, </span><span class="s1">verbose</span><span class="s2">=</span><span class="s6">0</span><span class="s2">)</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">f&quot;Test Accuracy: </span><span class="s0">{</span><span class="s1">accuracy </span><span class="s2">* </span><span class="s6">100</span><span class="s0">:</span><span class="s5">.2f</span><span class="s0">}</span><span class="s5">%&quot;</span><span class="s2">)</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">f&quot;Test Loss: </span><span class="s0">{</span><span class="s1">loss</span><span class="s0">:</span><span class="s5">.4f</span><span class="s0">}</span><span class="s5">&quot;</span><span class="s2">)</span>
+
+        <span class="s3"># 6. Save the trained model for later use</span>
+        <span class="s1">model</span><span class="s2">.</span><span class="s1">save</span><span class="s2">(</span><span class="s5">&quot;facial_expression_model.h5&quot;</span><span class="s2">)</span>
+        <span class="s1">print</span><span class="s2">(</span><span class="s5">&quot;</span><span class="s0">\n</span><span class="s5">Model saved as 'facial_expression_model.h5'&quot;</span><span class="s2">)</span></pre>
+</body>
+</html>

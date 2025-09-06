@@ -1,0 +1,83 @@
+<html>
+<head>
+<title>predict_custom.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+predict_custom.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">cv2</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+<span class="s0">from </span><span class="s1">tensorflow</span><span class="s2">.</span><span class="s1">keras</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">load_model</span>
+
+<span class="s3"># --- Load Your Custom Trained Model and Labels ---</span>
+
+<span class="s3"># 1. Load the custom model you just trained</span>
+<span class="s1">model </span><span class="s2">= </span><span class="s1">load_model</span><span class="s2">(</span><span class="s4">'custom_emotion_model.h5'</span><span class="s2">)</span>
+
+<span class="s3"># 2. Define the new emotion labels in the correct order (0, 1, 2, 3)</span>
+<span class="s3"># This MUST match the folders you created</span>
+<span class="s1">emotion_labels </span><span class="s2">= [</span><span class="s4">'Bored'</span><span class="s2">, </span><span class="s4">'Not Looking'</span><span class="s2">, </span><span class="s4">'Sleepy/Yawning'</span><span class="s2">, </span><span class="s4">'Interested'</span><span class="s2">]</span>
+
+<span class="s3"># 3. Load the face detector from OpenCV</span>
+<span class="s1">face_cascade </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">CascadeClassifier</span><span class="s2">(</span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">data</span><span class="s2">.</span><span class="s1">haarcascades </span><span class="s2">+ </span><span class="s4">'haarcascade_frontalface_default.xml'</span><span class="s2">)</span>
+
+<span class="s3"># --- Start Webcam Feed ---</span>
+
+<span class="s3"># 4. Start capturing video from the webcam</span>
+<span class="s1">cap </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">VideoCapture</span><span class="s2">(</span><span class="s5">0</span><span class="s2">)</span>
+
+<span class="s1">print</span><span class="s2">(</span><span class="s4">&quot;--- Starting Custom Emotion Detector ---&quot;</span><span class="s2">)</span>
+<span class="s1">print</span><span class="s2">(</span><span class="s4">&quot;Press 'q' to quit.&quot;</span><span class="s2">)</span>
+
+<span class="s0">while True</span><span class="s2">:</span>
+    <span class="s1">ret</span><span class="s2">, </span><span class="s1">frame </span><span class="s2">= </span><span class="s1">cap</span><span class="s2">.</span><span class="s1">read</span><span class="s2">()</span>
+    <span class="s0">if not </span><span class="s1">ret</span><span class="s2">:</span>
+        <span class="s0">break</span>
+
+    <span class="s1">gray </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">cvtColor</span><span class="s2">(</span><span class="s1">frame</span><span class="s2">, </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">COLOR_BGR2GRAY</span><span class="s2">)</span>
+    <span class="s1">faces </span><span class="s2">= </span><span class="s1">face_cascade</span><span class="s2">.</span><span class="s1">detectMultiScale</span><span class="s2">(</span><span class="s1">gray</span><span class="s2">, </span><span class="s1">scaleFactor</span><span class="s2">=</span><span class="s5">1.2</span><span class="s2">, </span><span class="s1">minNeighbors</span><span class="s2">=</span><span class="s5">5</span><span class="s2">, </span><span class="s1">minSize</span><span class="s2">=(</span><span class="s5">40</span><span class="s2">, </span><span class="s5">40</span><span class="s2">))</span>
+
+    <span class="s0">for </span><span class="s2">(</span><span class="s1">x</span><span class="s2">, </span><span class="s1">y</span><span class="s2">, </span><span class="s1">w</span><span class="s2">, </span><span class="s1">h</span><span class="s2">) </span><span class="s0">in </span><span class="s1">faces</span><span class="s2">:</span>
+        <span class="s3"># 5. Extract and preprocess the face image exactly as you did for training</span>
+        <span class="s1">roi_gray </span><span class="s2">= </span><span class="s1">gray</span><span class="s2">[</span><span class="s1">y</span><span class="s2">:</span><span class="s1">y </span><span class="s2">+ </span><span class="s1">h</span><span class="s2">, </span><span class="s1">x</span><span class="s2">:</span><span class="s1">x </span><span class="s2">+ </span><span class="s1">w</span><span class="s2">]</span>
+        <span class="s1">roi_resized </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">resize</span><span class="s2">(</span><span class="s1">roi_gray</span><span class="s2">, (</span><span class="s5">48</span><span class="s2">, </span><span class="s5">48</span><span class="s2">))</span>
+        <span class="s1">roi_processed </span><span class="s2">= </span><span class="s1">roi_resized</span><span class="s2">.</span><span class="s1">astype</span><span class="s2">(</span><span class="s4">'float32'</span><span class="s2">) / </span><span class="s5">255.0</span>
+        <span class="s1">roi_processed </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">expand_dims</span><span class="s2">(</span><span class="s1">roi_processed</span><span class="s2">, </span><span class="s1">axis</span><span class="s2">=-</span><span class="s5">1</span><span class="s2">)</span>
+        <span class="s1">roi_processed </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">expand_dims</span><span class="s2">(</span><span class="s1">roi_processed</span><span class="s2">, </span><span class="s1">axis</span><span class="s2">=</span><span class="s5">0</span><span class="s2">)</span>
+
+        <span class="s3"># 6. Make a prediction with YOUR custom model</span>
+        <span class="s1">predictions </span><span class="s2">= </span><span class="s1">model</span><span class="s2">.</span><span class="s1">predict</span><span class="s2">(</span><span class="s1">roi_processed</span><span class="s2">)</span>
+
+        <span class="s3"># 7. Get the predicted label</span>
+        <span class="s1">max_index </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">argmax</span><span class="s2">(</span><span class="s1">predictions</span><span class="s2">[</span><span class="s5">0</span><span class="s2">])</span>
+        <span class="s1">predicted_emotion </span><span class="s2">= </span><span class="s1">emotion_labels</span><span class="s2">[</span><span class="s1">max_index</span><span class="s2">]</span>
+
+        <span class="s3"># --- Display the Results ---</span>
+
+        <span class="s3"># 8. Draw a rectangle and the predicted label on the frame</span>
+        <span class="s1">cv2</span><span class="s2">.</span><span class="s1">rectangle</span><span class="s2">(</span><span class="s1">frame</span><span class="s2">, (</span><span class="s1">x</span><span class="s2">, </span><span class="s1">y</span><span class="s2">), (</span><span class="s1">x </span><span class="s2">+ </span><span class="s1">w</span><span class="s2">, </span><span class="s1">y </span><span class="s2">+ </span><span class="s1">h</span><span class="s2">), (</span><span class="s5">0</span><span class="s2">, </span><span class="s5">255</span><span class="s2">, </span><span class="s5">0</span><span class="s2">), </span><span class="s5">2</span><span class="s2">)</span>
+        <span class="s1">cv2</span><span class="s2">.</span><span class="s1">putText</span><span class="s2">(</span><span class="s1">frame</span><span class="s2">, </span><span class="s1">predicted_emotion</span><span class="s2">, (</span><span class="s1">x</span><span class="s2">, </span><span class="s1">y </span><span class="s2">- </span><span class="s5">10</span><span class="s2">), </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">FONT_HERSHEY_SIMPLEX</span><span class="s2">, </span><span class="s5">0.9</span><span class="s2">, (</span><span class="s5">0</span><span class="s2">, </span><span class="s5">255</span><span class="s2">, </span><span class="s5">0</span><span class="s2">), </span><span class="s5">2</span><span class="s2">)</span>
+
+    <span class="s3"># Display the final frame</span>
+    <span class="s1">cv2</span><span class="s2">.</span><span class="s1">imshow</span><span class="s2">(</span><span class="s4">'Custom Emotion Detector'</span><span class="s2">, </span><span class="s1">frame</span><span class="s2">)</span>
+
+    <span class="s3"># 9. Quit when 'q' is pressed</span>
+    <span class="s0">if </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">waitKey</span><span class="s2">(</span><span class="s5">1</span><span class="s2">) &amp; </span><span class="s5">0xFF </span><span class="s2">== </span><span class="s1">ord</span><span class="s2">(</span><span class="s4">'q'</span><span class="s2">):</span>
+        <span class="s0">break</span>
+
+<span class="s1">cap</span><span class="s2">.</span><span class="s1">release</span><span class="s2">()</span>
+<span class="s1">cv2</span><span class="s2">.</span><span class="s1">destroyAllWindows</span><span class="s2">()</span></pre>
+</body>
+</html>

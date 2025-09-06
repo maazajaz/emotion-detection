@@ -1,0 +1,113 @@
+<html>
+<head>
+<title>server.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #5f826b; font-style: italic;}
+.s6 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+server.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">cv2</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+<span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Flask</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">jsonify</span>
+<span class="s0">from </span><span class="s1">flask_cors </span><span class="s0">import </span><span class="s1">CORS</span>
+<span class="s0">from </span><span class="s1">tensorflow</span><span class="s2">.</span><span class="s1">keras</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">load_model</span>
+<span class="s0">import </span><span class="s1">base64</span>
+<span class="s0">import </span><span class="s1">os</span>
+
+<span class="s3"># --- Initialization ---</span>
+
+<span class="s1">print</span><span class="s2">(</span><span class="s4">&quot;--- Starting Server ---&quot;</span><span class="s2">)</span>
+
+<span class="s3"># 1. Initialize the Flask application</span>
+<span class="s1">app </span><span class="s2">= </span><span class="s1">Flask</span><span class="s2">(</span><span class="s1">__name__</span><span class="s2">)</span>
+<span class="s1">CORS</span><span class="s2">(</span><span class="s1">app</span><span class="s2">)  </span><span class="s3"># Enable Cross-Origin Resource Sharing</span>
+
+<span class="s3"># 2. Load your custom trained model</span>
+<span class="s1">MODEL_PATH </span><span class="s2">= </span><span class="s4">&quot;custom_emotion_model.h5&quot;</span>
+<span class="s0">if not </span><span class="s1">os</span><span class="s2">.</span><span class="s1">path</span><span class="s2">.</span><span class="s1">exists</span><span class="s2">(</span><span class="s1">MODEL_PATH</span><span class="s2">):</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s4">f&quot;FATAL ERROR: Model file not found at </span><span class="s0">{</span><span class="s1">MODEL_PATH</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+    <span class="s1">print</span><span class="s2">(</span><span class="s4">&quot;Please make sure the model is trained and the file exists.&quot;</span><span class="s2">)</span>
+    <span class="s1">exit</span><span class="s2">()</span>
+
+<span class="s1">model </span><span class="s2">= </span><span class="s1">load_model</span><span class="s2">(</span><span class="s1">MODEL_PATH</span><span class="s2">)</span>
+<span class="s1">print</span><span class="s2">(</span><span class="s4">f&quot;✅ Model '</span><span class="s0">{</span><span class="s1">MODEL_PATH</span><span class="s0">}</span><span class="s4">' loaded successfully.&quot;</span><span class="s2">)</span>
+
+<span class="s3"># 3. Define the emotion labels in the correct order</span>
+<span class="s1">emotion_labels </span><span class="s2">= [</span><span class="s4">'Bored'</span><span class="s2">, </span><span class="s4">'Not Looking'</span><span class="s2">, </span><span class="s4">'Sleepy/Yawning'</span><span class="s2">, </span><span class="s4">'Interested'</span><span class="s2">]</span>
+<span class="s1">print</span><span class="s2">(</span><span class="s4">f&quot;✅ Emotion labels loaded: </span><span class="s0">{</span><span class="s1">emotion_labels</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+
+<span class="s3"># 4. Load the face detector from OpenCV</span>
+<span class="s1">face_cascade </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">CascadeClassifier</span><span class="s2">(</span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">data</span><span class="s2">.</span><span class="s1">haarcascades </span><span class="s2">+ </span><span class="s4">'haarcascade_frontalface_default.xml'</span><span class="s2">)</span>
+<span class="s1">print</span><span class="s2">(</span><span class="s4">&quot;✅ Face detector loaded successfully.&quot;</span><span class="s2">)</span>
+
+
+<span class="s3"># --- API Endpoint for Prediction ---</span>
+
+<span class="s2">@</span><span class="s1">app</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/predict'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">predict</span><span class="s2">():</span>
+    <span class="s5">&quot;&quot;&quot; 
+    This function is called when the frontend sends an image to the /predict URL. 
+    &quot;&quot;&quot;</span>
+    <span class="s3"># Get the image data from the request</span>
+    <span class="s1">data </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">get_json</span><span class="s2">()</span>
+    <span class="s0">if not </span><span class="s1">data </span><span class="s0">or </span><span class="s4">'image' </span><span class="s0">not in </span><span class="s1">data</span><span class="s2">:</span>
+        <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">'error'</span><span class="s2">: </span><span class="s4">'No image data received'</span><span class="s2">}), </span><span class="s6">400</span>
+
+    <span class="s3"># The image comes in as a base64 string, so we need to decode it</span>
+    <span class="s3"># The header &quot;data:image/jpeg;base64,&quot; needs to be removed first</span>
+    <span class="s1">image_data </span><span class="s2">= </span><span class="s1">base64</span><span class="s2">.</span><span class="s1">b64decode</span><span class="s2">(</span><span class="s1">data</span><span class="s2">[</span><span class="s4">'image'</span><span class="s2">].</span><span class="s1">split</span><span class="s2">(</span><span class="s4">','</span><span class="s2">)[</span><span class="s6">1</span><span class="s2">])</span>
+
+    <span class="s3"># Convert the decoded image data into a numpy array that OpenCV can use</span>
+    <span class="s1">np_arr </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">frombuffer</span><span class="s2">(</span><span class="s1">image_data</span><span class="s2">, </span><span class="s1">np</span><span class="s2">.</span><span class="s1">uint8</span><span class="s2">)</span>
+    <span class="s1">frame </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">imdecode</span><span class="s2">(</span><span class="s1">np_arr</span><span class="s2">, </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">IMREAD_COLOR</span><span class="s2">)</span>
+
+    <span class="s3"># --- Perform Prediction (similar to predict_custom.py) ---</span>
+
+    <span class="s1">gray </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">cvtColor</span><span class="s2">(</span><span class="s1">frame</span><span class="s2">, </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">COLOR_BGR2GRAY</span><span class="s2">)</span>
+    <span class="s1">faces </span><span class="s2">= </span><span class="s1">face_cascade</span><span class="s2">.</span><span class="s1">detectMultiScale</span><span class="s2">(</span><span class="s1">gray</span><span class="s2">, </span><span class="s1">scaleFactor</span><span class="s2">=</span><span class="s6">1.2</span><span class="s2">, </span><span class="s1">minNeighbors</span><span class="s2">=</span><span class="s6">5</span><span class="s2">, </span><span class="s1">minSize</span><span class="s2">=(</span><span class="s6">40</span><span class="s2">, </span><span class="s6">40</span><span class="s2">))</span>
+
+    <span class="s0">if </span><span class="s1">len</span><span class="s2">(</span><span class="s1">faces</span><span class="s2">) &gt; </span><span class="s6">0</span><span class="s2">:</span>
+        <span class="s3"># We'll only process the first face found</span>
+        <span class="s2">(</span><span class="s1">x</span><span class="s2">, </span><span class="s1">y</span><span class="s2">, </span><span class="s1">w</span><span class="s2">, </span><span class="s1">h</span><span class="s2">) = </span><span class="s1">faces</span><span class="s2">[</span><span class="s6">0</span><span class="s2">]</span>
+
+        <span class="s3"># Preprocess the face for the model</span>
+        <span class="s1">roi_gray </span><span class="s2">= </span><span class="s1">gray</span><span class="s2">[</span><span class="s1">y</span><span class="s2">:</span><span class="s1">y </span><span class="s2">+ </span><span class="s1">h</span><span class="s2">, </span><span class="s1">x</span><span class="s2">:</span><span class="s1">x </span><span class="s2">+ </span><span class="s1">w</span><span class="s2">]</span>
+        <span class="s1">roi_resized </span><span class="s2">= </span><span class="s1">cv2</span><span class="s2">.</span><span class="s1">resize</span><span class="s2">(</span><span class="s1">roi_gray</span><span class="s2">, (</span><span class="s6">48</span><span class="s2">, </span><span class="s6">48</span><span class="s2">))</span>
+        <span class="s1">roi_processed </span><span class="s2">= </span><span class="s1">roi_resized</span><span class="s2">.</span><span class="s1">astype</span><span class="s2">(</span><span class="s4">'float32'</span><span class="s2">) / </span><span class="s6">255.0</span>
+        <span class="s1">roi_processed </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">expand_dims</span><span class="s2">(</span><span class="s1">roi_processed</span><span class="s2">, </span><span class="s1">axis</span><span class="s2">=-</span><span class="s6">1</span><span class="s2">)</span>
+        <span class="s1">roi_processed </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">expand_dims</span><span class="s2">(</span><span class="s1">roi_processed</span><span class="s2">, </span><span class="s1">axis</span><span class="s2">=</span><span class="s6">0</span><span class="s2">)</span>
+
+        <span class="s3"># Make a prediction</span>
+        <span class="s1">predictions </span><span class="s2">= </span><span class="s1">model</span><span class="s2">.</span><span class="s1">predict</span><span class="s2">(</span><span class="s1">roi_processed</span><span class="s2">)</span>
+        <span class="s1">max_index </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">argmax</span><span class="s2">(</span><span class="s1">predictions</span><span class="s2">[</span><span class="s6">0</span><span class="s2">])</span>
+        <span class="s1">predicted_emotion </span><span class="s2">= </span><span class="s1">emotion_labels</span><span class="s2">[</span><span class="s1">max_index</span><span class="s2">]</span>
+
+        <span class="s3"># Send the prediction back to the frontend</span>
+        <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">'prediction'</span><span class="s2">: </span><span class="s1">predicted_emotion</span><span class="s2">})</span>
+    <span class="s0">else</span><span class="s2">:</span>
+        <span class="s3"># If no face is found, return a specific response</span>
+        <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">'prediction'</span><span class="s2">: </span><span class="s4">'No Face Detected'</span><span class="s2">})</span>
+
+
+<span class="s3"># --- Start the Server ---</span>
+
+<span class="s0">if </span><span class="s1">__name__ </span><span class="s2">== </span><span class="s4">'__main__'</span><span class="s2">:</span>
+    <span class="s3"># Run the Flask app on port 5000</span>
+    <span class="s3"># host='0.0.0.0' makes it accessible from your local network</span>
+    <span class="s1">app</span><span class="s2">.</span><span class="s1">run</span><span class="s2">(</span><span class="s1">host</span><span class="s2">=</span><span class="s4">'0.0.0.0'</span><span class="s2">, </span><span class="s1">port</span><span class="s2">=</span><span class="s6">5000</span><span class="s2">, </span><span class="s1">debug</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+
+</pre>
+</body>
+</html>
